@@ -1,0 +1,35 @@
+{
+  "model_name": "logistic_regression",
+  "mlflow_run_id": "41b3516f8dc648e98468c40ede55f25b",
+  "best_params": {
+    "C": "1.0",
+    "class_weight": "None",
+    "penalty": "l2"
+  },
+  "cv_roc_auc_mean": 0.9054283076022209,
+  "test_metrics": {
+    "test_accuracy": 0.8688524590163934,
+    "test_precision": 0.8125,
+    "test_recall": 0.9285714285714286,
+    "test_f1": 0.8666666666666667,
+    "test_roc_auc": 0.95995670995671
+  },
+  "features": [
+    "age",
+    "trestbps",
+    "chol",
+    "thalach",
+    "oldpeak",
+    "cp",
+    "restecg",
+    "slope",
+    "thal",
+    "sex",
+    "fbs",
+    "exang",
+    "ca"
+  ],
+  "trained_at": "2026-10-17T21:32:59.329430+00:00",
+  "sklearn_version": "1.5.2",
+  "python_version": "3.11.17"
+}

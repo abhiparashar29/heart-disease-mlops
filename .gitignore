@@ -218,3 +218,13 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Project-specific
+mlruns/
+mlartifacts/
+.ipynb_checkpoints/
+
+# Project-specific
+mlruns/
+mlartifacts/
+.ipynb_checkpoints/

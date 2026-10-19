@@ -1,0 +1,139 @@
+name: CI - Heart Disease MLOps
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:   # adds a "Run workflow" button on GitHub
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install ruff
+        run: pip install ruff==0.7.2
+
+      - name: Run linter
+        run: ruff check src tests --output-format=github
+
+  test:
+    name: Unit tests (pytest)
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run unit tests
+        run: pytest --junitxml=test-results/junit.xml
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results/
+
+  train:
+    name: Train & evaluate model
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Preprocess data
+        run: python src/preprocessing.py
+
+      - name: Train models (tracked with MLflow)
+        run: python -m src.train
+
+      - name: Quality gate (test ROC-AUC >= 0.85)
+        run: |
+          python - <<'EOF'
+          import json, sys
+          meta = json.load(open("models/metadata.json"))
+          auc = meta["test_metrics"]["test_roc_auc"]
+          print(f"Best model: {meta['model_name']} | test ROC-AUC = {auc:.3f}")
+          if auc < 0.85:
+              print("::error::Model quality below threshold (0.85). Failing pipeline.")
+              sys.exit(1)
+          print("Quality gate passed.")
+          EOF
+
+      - name: Write results to job summary
+        run: |
+          python - <<'EOF' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          import pandas as pd
+          cols = ["model", "cv_roc_auc_mean", "test_accuracy", "test_recall", "test_roc_auc"]
+          d = pd.read_csv("reports/training/model_comparison.csv")[cols].round(3)
+          meta = json.load(open("models/metadata.json"))
+          print("## Model comparison\n")
+          print("| " + " | ".join(cols) + " |")
+          print("|" + "---|" * len(cols))
+          for row in d.values:
+              print("| " + " | ".join(map(str, row)) + " |")
+          print(f"\n**Selected model:** {meta['model_name']} "
+                f"(CV ROC-AUC {meta['cv_roc_auc_mean']:.3f})")
+          EOF
+
+      - name: Upload trained model
+        uses: actions/upload-artifact@v4
+        with:
+          name: trained-model
+          path: models/
+          retention-days: 14
+
+      - name: Upload training reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: training-reports
+          path: reports/training/
+          retention-days: 14
+
+      - name: Upload MLflow runs
+        uses: actions/upload-artifact@v4
+        with:
+          name: mlflow-runs
+          path: mlruns/
+          retention-days: 14

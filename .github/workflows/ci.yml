@@ -31,7 +31,7 @@ jobs:
         run: pip install ruff==0.7.2
 
       - name: Run linter
-        run: ruff check src tests --output-format=github
+        run: ruff check src tests app --output-format=github
 
   test:
     name: Unit tests (pytest)

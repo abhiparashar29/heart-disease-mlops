@@ -1,0 +1,17 @@
+.git
+.github
+.vscode
+__pycache__/
+*.pyc
+.pytest_cache
+.ruff_cache
+mlruns/
+mlartifacts/
+notebooks/
+reports/
+screenshots/
+docs/
+data/
+tests/
+k8s/
+monitoring/

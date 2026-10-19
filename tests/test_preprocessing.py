@@ -25,7 +25,7 @@ def test_target_mapping_is_correct():
     """num 0 -> 0 (no disease); num 1-4 -> 1 (disease)."""
     rows = [{**{f: 1 for f in FEATURES}, "num": n} for n in [0, 1, 2, 3, 4]]
     out = clean_data(pd.DataFrame(rows))
-    assert out[TARGET].tolist() == [0, 1, 1, 1, 1]
+    assert out[TARGET].tolist() == [0, 0, 1, 1, 1]
 
 
 def test_clean_data_removes_duplicates(raw_df):

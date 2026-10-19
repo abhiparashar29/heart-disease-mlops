@@ -1,0 +1,28 @@
+# Settings for the kube-prometheus-stack Helm chart (local minikube setup)
+alertmanager:
+  enabled: false            # alerting not needed for this assignment
+
+grafana:
+  adminPassword: admin123   # local demo only
+  defaultDashboardsEnabled: true
+
+prometheus:
+  prometheusSpec:
+    scrapeInterval: 15s
+    retention: 1d
+    # pick up ServiceMonitors from any namespace / release
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    resources:
+      requests:
+        memory: 400Mi
+
+# control-plane components are not reachable on minikube -> avoid "down" targets
+kubeEtcd:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false

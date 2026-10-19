@@ -1,0 +1,18 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: heart-api
+  namespace: monitoring
+  labels:
+    release: monitoring
+spec:
+  namespaceSelector:
+    matchNames:
+      - heart-disease
+  selector:
+    matchLabels:
+      app: heart-api
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s

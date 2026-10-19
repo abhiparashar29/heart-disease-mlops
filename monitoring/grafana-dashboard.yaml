@@ -1,0 +1,89 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: heart-api-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"   # Grafana's sidecar auto-loads ConfigMaps with this label
+data:
+  heart-api-dashboard.json: |
+    {
+      "title": "Heart Disease API - Monitoring",
+      "uid": "heart-api",
+      "tags": ["mlops", "heart-disease"],
+      "timezone": "browser",
+      "refresh": "10s",
+      "time": {"from": "now-30m", "to": "now"},
+      "schemaVersion": 39,
+      "panels": [
+        {
+          "id": 1, "type": "stat", "title": "API pods up",
+          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"refId": "A", "expr": "sum(up{job=\"heart-api\"})"}]
+        },
+        {
+          "id": 2, "type": "stat", "title": "Total predictions",
+          "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"refId": "A", "expr": "sum(heart_predictions_total)"}]
+        },
+        {
+          "id": 3, "type": "stat", "title": "Predicted 'disease' (%)",
+          "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {"defaults": {"unit": "percent", "decimals": 1}},
+          "targets": [{"refId": "A", "expr": "100 * (sum(heart_predictions_total{prediction=\"1\"}) or vector(0)) / sum(heart_predictions_total)"}]
+        },
+        {
+          "id": 4, "type": "stat", "title": "Rejected requests (4xx, 30m)",
+          "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"refId": "A", "expr": "sum(increase(http_requests_total{job=\"heart-api\", status=\"4xx\"}[30m])) or vector(0)"}]
+        },
+        {
+          "id": 5, "type": "timeseries", "title": "Request rate by endpoint (req/s)",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {"defaults": {"unit": "reqps"}},
+          "targets": [{"refId": "A", "expr": "sum by (handler) (rate(http_requests_total{job=\"heart-api\"}[1m]))", "legendFormat": "{{handler}}"}]
+        },
+        {
+          "id": 6, "type": "timeseries", "title": "/predict latency (p50 / p95)",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {"defaults": {"unit": "s"}},
+          "targets": [
+            {"refId": "A", "expr": "histogram_quantile(0.50, sum by (le) (rate(http_request_duration_seconds_bucket{job=\"heart-api\", handler=\"/predict\"}[5m])))", "legendFormat": "p50"},
+            {"refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job=\"heart-api\", handler=\"/predict\"}[5m])))", "legendFormat": "p95"}
+          ]
+        },
+        {
+          "id": 7, "type": "timeseries", "title": "Predictions per minute by class",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "targets": [{"refId": "A", "expr": "sum by (prediction) (rate(heart_predictions_total[1m])) * 60", "legendFormat": "class {{prediction}}"}]
+        },
+        {
+          "id": 8, "type": "bargauge", "title": "Predicted disease probability distribution",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "options": {"orientation": "vertical", "displayMode": "gradient"},
+          "targets": [{"refId": "A", "expr": "sum by (le) (heart_disease_probability_bucket)", "legendFormat": "<= {{le}}", "format": "heatmap"}]
+        },
+        {
+          "id": 9, "type": "timeseries", "title": "/predict requests per pod (load balancing)",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {"defaults": {"unit": "reqps"}},
+          "targets": [{"refId": "A", "expr": "sum by (pod) (rate(http_requests_total{job=\"heart-api\", handler=\"/predict\"}[1m]))", "legendFormat": "{{pod}}"}]
+        },
+        {
+          "id": 10, "type": "timeseries", "title": "Memory usage per pod",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {"defaults": {"unit": "bytes"}},
+          "targets": [{"refId": "A", "expr": "sum by (pod) (process_resident_memory_bytes{job=\"heart-api\"})", "legendFormat": "{{pod}}"}]
+        }
+      ]
+    }
